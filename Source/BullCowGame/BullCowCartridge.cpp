@@ -7,6 +7,8 @@ void UBullCowCartridge::BeginPlay() // When the game starts
 {
     Super::BeginPlay();
 
+    Isograms = GetValidWords(Words);
+
     SetupGame();  
 }
 
@@ -21,8 +23,6 @@ void UBullCowCartridge::OnInput(const FString& PlayerInput) // When the player h
     {
         ProcessGuess(PlayerInput);
     }
-
-
 }
 
 void UBullCowCartridge::SetupGame() 
@@ -30,30 +30,23 @@ void UBullCowCartridge::SetupGame()
     // Welcoming the Player
     PrintLine(TEXT("Welcome to Bulls and Cows!"));
 
-    HiddenWord = GetValidWords(Words)[FMath::RandRange(0, GetValidWords(Words).Num() - 1)];
-    Lives = HiddenWord.Len();
+    HiddenWord = Isograms[FMath::RandRange(0, Isograms.Num() - 1)];
+    Lives = HiddenWord.Len() * 2;
     bGameOver = false;
 
     PrintLine(TEXT("Guess the %i letter word!"), HiddenWord.Len());
+    // PrintLine(TEXT("The HiddenWord is: %s."), *HiddenWord); // Debug Line
+    UE_LOG(LogTemp, Warning, TEXT("The HiddenWord is: %s."), *HiddenWord); // Debug Line
     PrintLine(TEXT("You have %i lives."), Lives);
     PrintLine(TEXT("Type in your guess and \npress enter to continue..."));
-    PrintLine(TEXT("The HiddenWord is: %s."), *HiddenWord); // Debug Line
 
-}
-
-void UBullCowCartridge::EndGame() 
-{
-    bGameOver = true;
-    PrintLine(TEXT("Press Enter to play again."));
 }
 
 void UBullCowCartridge::ProcessGuess(const FString& Guess)
 {
     if (Guess == HiddenWord)
     {
-        PrintLine(TEXT("You have won!"));
-        // WinGame();
-        EndGame();
+        WinGame();
         return;
     }
     
@@ -80,37 +73,31 @@ void UBullCowCartridge::ProcessGuess(const FString& Guess)
         ClearScreen();
         PrintLine(TEXT("You have no lives left!"));
         PrintLine(TEXT("The Hidden Word was: %s"), *HiddenWord);
-        // LoseGame();
-        EndGame();
+        LoseGame();
         return;
     }
 
-    // Show Lives
+    // Show the Bulls and Cows
+    FBullCowCount Score = GetBullCows(Guess);
+
+    PrintLine(TEXT("You have %i Bulls and %i Cows"), Score.Bulls, Score.Cows);
     PrintLine(TEXT("You have %i lives remaining."), Lives);
         
 }
 
-// void UBullCowCartridge::WinGame()
-// {
-//     bGameOver = true;
-//     PrintLine(TEXT("You have reached my Win Screen! \nPress Enter to play again..."));
-//     if (bGameOver)
-//     {
-//         ClearScreen();
-//         SetupGame();
-//     }
-// }
+void UBullCowCartridge::WinGame()
+{
+    ClearScreen();
+    bGameOver = true;
+    PrintLine(TEXT("You Win! \nPress Enter to play again..."));
+}
 
-// void UBullCowCartridge::LoseGame()
-// {
-//     bGameOver = true;
-//     PrintLine(TEXT("You have reached my Lose Screen! \nPress Enter to play again..."));
-//     if (bGameOver)
-//     {
-//         ClearScreen();
-//         SetupGame();
-//     }
-// }
+void UBullCowCartridge::LoseGame()
+{
+    ClearScreen();
+    bGameOver = true;
+    PrintLine(TEXT("You Lose! \nPress Enter to play again..."));
+}
 
 bool UBullCowCartridge::IsIsogram(const FString& Word) const
 {
@@ -141,16 +128,28 @@ TArray<FString> UBullCowCartridge::GetValidWords(const TArray<FString>& WordList
     return ValidWords;
 }
 
-// Prompt to guess again
-// Check right number of characters
-// Prompt to guess again
-// Remove Life
-// Check if Lives > 0
-// If yes, GuessAgain
-// Show Lives
-// If Lives <= 0, show GameOver and HiddenWord?
-// Prompt to play again, Press Enter to play again?
-// Check user input
-// Play again or quit
-// ClearScreen();   
-// EndGame();
+FBullCowCount UBullCowCartridge::GetBullCows(const FString &Guess) const
+{
+    FBullCowCount Count;
+
+    for (int32 GuessIndex = 0; GuessIndex < Guess.Len(); GuessIndex++)
+    {
+        if (Guess[GuessIndex] == HiddenWord[GuessIndex])
+        {
+            Count.Bulls++;
+            continue; // Skip to the next iteration
+
+        }
+
+        for (int32 HiddenIndex = 0; HiddenIndex < HiddenWord.Len(); HiddenIndex++)
+        {
+            if (Guess[GuessIndex] == HiddenWord[HiddenIndex])
+            {
+                Count.Cows++;
+                break; // Skip to the next GuessIndex
+            }
+        }
+    }
+
+    return Count;
+}
